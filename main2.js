@@ -53,36 +53,50 @@ const fs = `
     vec3 direction;
   };
 
-  float hitSphere(vec3 center, float radius, Ray r) {
-    vec3 oc = r.origin - center;
+  struct Sphere {
+    vec3 center;
+    float radius;
+    // .. mat. etc.
+  };
+
+  struct hitRecord {
+    vec3 p;
+    vec3 normal;
+    float t;
+  };
+
+  float hitSphere(const Sphere s, const Ray r, const float tMin,
+      const float tMax) {
+    vec3 oc = r.origin - s.center;
     float a = pow(length(r.direction), 2.);
     float halfB = dot(oc, r.direction);
-    float c = pow(length(oc), 2.) - radius*radius;
+    float c = pow(length(oc), 2.) - s.radius * s.radius;
     float discriminant = halfB * halfB - a * c;
     if (discriminant < 0.) {
       return -1.0;
-    } else {
-      return (-halfB - sqrt(discriminant) ) / a;
     }
+    return (-halfB - sqrt(discriminant) ) / a;
   }
 
-  vec3 at(float t, Ray r) {
+  vec3 at(const float t, const Ray r) {
     return r.origin + t * r.direction;
   }
 
-  vec3 rayColor(Ray r) {
-    float t = hitSphere(vec3(0, 0, -1), 0.5, r);
-    if (t > 0.) {
-      vec3 N = normalize(at(t, r) - vec3(0, 0, -1));
-      return 0.5 * (N + 1.);
+  vec3 rayColor(const Ray r, const Sphere[2] spheres) {
+    for (int i = 0; i < 2; i++) {
+      float t = hitSphere(spheres[1], r, 0., 99999.);
+      if (t > 0.) {
+        vec3 N = normalize(at(t, r) - vec3(0, 0, -1));
+        return 0.5 * (N + 1.);
+      }
+      t = 0.5 * (normalize(r.direction).y + 1.);
+      return (1. - t) * vec3(1., 1., 1.) + t * vec3(0.5, 0.7, 1.0);
     }
-    t = 0.5 * (normalize(r.direction).y + 1.);
-    return (1. - t) * vec3(1., 1., 1.) + t * vec3(0.5, 0.7, 1.0);
   }
 
   void main() {
-    // compute texcoord from gl_FragCoord;
     vec2 texcoord = gl_FragCoord.xy / canvasDimensions;
+    // compute texcoord from gl_FragCoord;
     vec2 uv = gl_FragCoord.xy / (canvasDimensions - 1.);
 
     float aspectRatio = canvasDimensions.x / canvasDimensions.y;
@@ -104,9 +118,14 @@ const fs = `
       lowerLeftCorner + uv.x * horizontal + uv.y * vertical - origin
     );
 
+    Sphere spheres[2];
+    spheres[0] = Sphere(vec3(0, 0, -1), 0.5);
+    spheres[1] = Sphere(vec3(0, -100.5, -1), 100.);
+    //spheres[1] = Sphere(vec3(0, 1, -1), 0.4);
+
     // gl_FragColor is a special variable a fragment shader
     // is responsible for setting
-    gl_FragColor = vec4(rayColor(r), 1);
+    gl_FragColor = vec4(rayColor(r, spheres), 1);
   }
 `;
 
