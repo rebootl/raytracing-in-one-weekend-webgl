@@ -48,6 +48,9 @@ const fs = `
 
   uniform vec2 canvasDimensions;
 
+  const int NSPHERES = 2;
+  const int SAMPLES_PPX = 10;
+
   struct Ray {
     vec3 origin;
     vec3 direction;
@@ -63,35 +66,70 @@ const fs = `
     vec3 p;
     vec3 normal;
     float t;
+    bool frontFace;
   };
 
-  float hitSphere(const Sphere s, const Ray r, const float tMin,
-      const float tMax) {
-    vec3 oc = r.origin - s.center;
-    float a = pow(length(r.direction), 2.);
-    float halfB = dot(oc, r.direction);
-    float c = pow(length(oc), 2.) - s.radius * s.radius;
-    float discriminant = halfB * halfB - a * c;
-    if (discriminant < 0.) {
-      return -1.0;
-    }
-    return (-halfB - sqrt(discriminant) ) / a;
+  void setFaceNormal(const Ray r, const vec3 outwardNormal, inout hitRecord rec) {
+    rec.frontFace = dot(r.direction, outwardNormal) < 0.;
+    //rec.normal = rec.frontFace ? outwardNormal : -outwardNormal;
+    rec.normal = rec.frontFace ? outwardNormal : -outwardNormal;
   }
 
   vec3 at(const float t, const Ray r) {
     return r.origin + t * r.direction;
   }
 
-  vec3 rayColor(const Ray r, const Sphere[2] spheres) {
-    for (int i = 0; i < 2; i++) {
-      float t = hitSphere(spheres[1], r, 0., 99999.);
-      if (t > 0.) {
-        vec3 N = normalize(at(t, r) - vec3(0, 0, -1));
-        return 0.5 * (N + 1.);
-      }
-      t = 0.5 * (normalize(r.direction).y + 1.);
-      return (1. - t) * vec3(1., 1., 1.) + t * vec3(0.5, 0.7, 1.0);
+  bool hitSphere(const Sphere s, const Ray r, const float tMin,
+      const float tMax, out hitRecord rec) {
+    vec3 oc = r.origin - s.center;
+    float a = pow(length(r.direction), 2.);
+    float halfB = dot(oc, r.direction);
+    float c = pow(length(oc), 2.) - s.radius * s.radius;
+    float discriminant = halfB * halfB - a * c;
+    if (discriminant < 0.) {
+      return false;
     }
+    float sqrtd = sqrt(discriminant);
+
+    float root = (-halfB - sqrtd) / a;
+    if (root < tMin || tMax < root) {
+      root = (-halfB + sqrtd) / a;
+      if (root < tMin || tMax < root) {
+        return false;
+      }
+    }
+    rec.t = root;
+    rec.p = at(root, r);
+    vec3 outwardNormal = (rec.p - s.center) / s.radius;
+    setFaceNormal(r, outwardNormal, rec);
+    //rec.normal = outwardNormal;
+    return true;
+  }
+
+  bool worldHit(const Sphere[NSPHERES] spheres, const Ray r, const float tMin,
+      const float tMax, out hitRecord rec) {
+    hitRecord tempRec;
+    bool hitAnything = false;
+    float closestSoFar = tMax;
+
+    for (int i = 0; i < NSPHERES; i++) {
+      if (hitSphere(spheres[i], r, 0., closestSoFar, tempRec)) {
+        hitAnything = true;
+        closestSoFar = tempRec.t;
+        rec = tempRec;
+      }
+    }
+    return hitAnything;
+  }
+
+  vec3 rayColor(const Ray r, const Sphere[NSPHERES] spheres) {
+    hitRecord rec;
+    if (worldHit(spheres, r, 0., 99999., rec)) {
+      return 0.5 * (rec.normal + 1.);
+    }
+    // background
+    float t = 0.5 * (normalize(r.direction).y + 1.);
+    return (1. - t) * vec3(1., 1., 1.) + t * vec3(0.5, 0.7, 1.0);
   }
 
   void main() {
@@ -103,29 +141,37 @@ const fs = `
 
     // Camera
 
-    float viewportHeight = 2.0;
+    const float viewportHeight = 2.0;
     float viewportWidth = aspectRatio * viewportHeight;
-    float focalLength = 1.0;
+    const float focalLength = 1.0;
 
-    vec3 origin = vec3(0, 0, 0);
+    const vec3 origin = vec3(0, 0, 0);
     vec3 horizontal = vec3(viewportWidth, 0, 0);
     vec3 vertical = vec3(0, viewportHeight, 0);
     vec3 lowerLeftCorner = origin - horizontal / 2. - vertical / 2.
       - vec3(0, 0, focalLength);
 
-    Ray r = Ray(
-      origin,
-      lowerLeftCorner + uv.x * horizontal + uv.y * vertical - origin
-    );
-
-    Sphere spheres[2];
+    Sphere spheres[NSPHERES];
     spheres[0] = Sphere(vec3(0, 0, -1), 0.5);
     spheres[1] = Sphere(vec3(0, -100.5, -1), 100.);
     //spheres[1] = Sphere(vec3(0, 1, -1), 0.4);
 
+    vec3 pixelColor = vec3(0, 0, 0);
+
+    for (int s = 0; s < SAMPLES_PPX; s++) {
+
+      // -> rand
+
+      Ray r = Ray(
+        origin,
+        lowerLeftCorner + uv.x * horizontal + uv.y * vertical - origin
+      );
+      pixelColor += rayColor(r, spheres) / float(SAMPLES_PPX);
+    }
+
     // gl_FragColor is a special variable a fragment shader
     // is responsible for setting
-    gl_FragColor = vec4(rayColor(r, spheres), 1);
+    gl_FragColor = vec4(pixelColor, 1);
   }
 `;
 
