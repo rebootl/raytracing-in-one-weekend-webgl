@@ -49,7 +49,7 @@ const fs = `
   uniform vec2 canvasDimensions;
 
   const int NSPHERES = 2;
-  const int SAMPLES_PPX = 10;
+  const int SAMPLES_PPX = 100;
 
   struct Ray {
     vec3 origin;
@@ -68,6 +68,10 @@ const fs = `
     float t;
     bool frontFace;
   };
+
+  float rand(vec2 co){
+      return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+  }
 
   void setFaceNormal(const Ray r, const vec3 outwardNormal, inout hitRecord rec) {
     rec.frontFace = dot(r.direction, outwardNormal) < 0.;
@@ -135,7 +139,7 @@ const fs = `
   void main() {
     vec2 texcoord = gl_FragCoord.xy / canvasDimensions;
     // compute texcoord from gl_FragCoord;
-    vec2 uv = gl_FragCoord.xy / (canvasDimensions - 1.);
+    //vec2 uv = gl_FragCoord.xy / (canvasDimensions - 1.);
 
     float aspectRatio = canvasDimensions.x / canvasDimensions.y;
 
@@ -160,11 +164,13 @@ const fs = `
 
     for (int s = 0; s < SAMPLES_PPX; s++) {
 
-      // -> rand
+      float f = float(s) / float(SAMPLES_PPX);
+      float u = (gl_FragCoord.x + rand(gl_FragCoord.xy + f)) / (canvasDimensions.x - 1.);
+      float v = (gl_FragCoord.y + rand(gl_FragCoord.yx + f)) / (canvasDimensions.y - 1.);
 
       Ray r = Ray(
         origin,
-        lowerLeftCorner + uv.x * horizontal + uv.y * vertical - origin
+        lowerLeftCorner + u * horizontal + v * vertical - origin
       );
       pixelColor += rayColor(r, spheres) / float(SAMPLES_PPX);
     }
