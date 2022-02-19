@@ -44,7 +44,7 @@ const vs = `
 const fs = `
   // fragment shaders don't have a default precision so we need
   // to pick one. mediump is a good default
-  precision mediump float;
+  precision highp float;
 
   uniform vec2 canvasDimensions;
 
@@ -69,8 +69,36 @@ const fs = `
     bool frontFace;
   };
 
-  float rand(vec2 co){
-      return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+  float _x;
+
+  void seed(float s) {
+    _x = s;
+  }
+
+  float randomLCG() {
+    const float m = pow(2., 31.) - 1.;
+    const float a = 48271.;
+    _x = mod(a * _x, m);
+    return _x;
+  }
+
+  float random(float min, float max) {
+    float r = randomLCG() / (pow(2., 31.) - 1.);
+    return min + (max - min) * r;
+  }
+
+  vec3 randomVector(float min, float max) {
+    return vec3(random(min, max), random(min, max), random(min, max));
+  }
+
+  vec3 randomInUnitSphere() {
+    for (int s = 0; s < 50; s++) {
+      vec3 p = randomVector(-1., 1.);
+      if (pow(length(p), 2.) >= 1.) continue;
+      return p;
+    }
+    // return anyways
+    return randomVector(-1., 1.);
   }
 
   void setFaceNormal(const Ray r, const vec3 outwardNormal, inout hitRecord rec) {
@@ -162,11 +190,12 @@ const fs = `
 
     vec3 pixelColor = vec3(0, 0, 0);
 
+    seed(gl_FragCoord.x * gl_FragCoord.y);
+
     for (int s = 0; s < SAMPLES_PPX; s++) {
 
-      float f = float(s) / float(SAMPLES_PPX);
-      float u = (gl_FragCoord.x + rand(gl_FragCoord.xy + f)) / (canvasDimensions.x - 1.);
-      float v = (gl_FragCoord.y + rand(gl_FragCoord.yx + f)) / (canvasDimensions.y - 1.);
+      float u = (gl_FragCoord.x + random(0., 1.)) / (canvasDimensions.x - 1.);
+      float v = (gl_FragCoord.y + random(0., 1.)) / (canvasDimensions.y - 1.);
 
       Ray r = Ray(
         origin,
