@@ -47,7 +47,7 @@ function createTexture(gl, data, width, height) {
       height,
       0,        // border
       gl.RGBA,  // format
-      gl.UNSIGNED_BYTE, // type
+      gl.FLOAT, // type
       data,
   );
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -82,13 +82,13 @@ const fs = `
   // to pick one. mediump is a good default
   precision highp float;
 
-  uniform sampler2D outputTex;
+  uniform sampler2D inputTex;
   uniform vec2 canvasDimensions;
   uniform float time;
   uniform float niter;
 
   const int NSPHERES = 2;
-  const int MAX_DEPTH = 5;
+  const int MAX_DEPTH = 15;
 
   struct Ray {
     vec3 origin;
@@ -108,7 +108,7 @@ const fs = `
     bool frontFace;
   };
 
-
+/*
   #define PHI 1.61803398874989484820459
   #define PI 3.1415926535897932385
   #define TAU 2. * PI
@@ -154,9 +154,8 @@ const fs = `
       float r = sqrt(1. - z*z);
       return vec3(r*cos(a), r*sin(a), z);
   }
+*/
 
-
-/*
   float _x;
 
   void seed(float s) {
@@ -175,6 +174,10 @@ const fs = `
     return min + (max - min) * r;
   }
 
+  vec2 randomVec2(float min, float max) {
+    return vec2(random(min, max), random(min, max));
+  }
+
   vec3 randomVector(float min, float max) {
     return vec3(random(min, max), random(min, max), random(min, max));
   }
@@ -188,7 +191,6 @@ const fs = `
     // return anyways
     return randomVector(-1., 1.);
   }
-*/
 
   void setFaceNormal(const Ray r, const vec3 outwardNormal, inout hitRecord rec) {
     rec.frontFace = dot(r.direction, outwardNormal) < 0.;
@@ -249,31 +251,35 @@ const fs = `
     float t = 0.5 * (normalize(r.direction).y + 1.);
     vec3 col = (1. - t) * vec3(1., 1., 1.) + t * vec3(0.5, 0.7, 1.0);
 
-    for (int s = 0; s < MAX_DEPTH; s++) {
+    for (int s = 0; s < 2; s++) {
 
       bool hit = worldHit(spheres, r, 0., 99999., rec);
 
       if (!hit) {
         return col;
       }
-      vec3 jitter = randomUnit(g_seed);
-      if (isnan(jitter.r) || isnan(jitter.g) || isnan(jitter.b)) {
+      vec3 jitter = randomInUnitSphere();
+      /*if (isnan(jitter.r) || isnan(jitter.g) || isnan(jitter.b)) {
         jitter = vec3(0.);
-      }
+      }*/
       vec3 target = rec.p + rec.normal + jitter;
       r = Ray(rec.p, target - rec.p);
       col = 0.5 * col;
     }
+
     return col;
   }
 
   void main() {
     vec2 uv = gl_FragCoord.xy / canvasDimensions;
 
+    /*
     g_seed = random(gl_FragCoord.xy * (mod(time, 100.)));
     if(isnan(g_seed)){
       g_seed = 0.25;
     }
+    */
+    seed(gl_FragCoord.x * gl_FragCoord.y * time);
 
     float aspectRatio = canvasDimensions.x / canvasDimensions.y;
 
@@ -297,12 +303,13 @@ const fs = `
     //vec3 pixelColor = vec3(0, 0, 0);
 
     // anti aliasing
-    vec2 jitter = (2. * random2(g_seed)) - 1.;
-    vec2 st = uv + jitter * 0.001;
+    vec2 jitter = (2. * randomVec2(0., 1.)) - 1.;
+    vec2 st = uv;
     // check for NaN leakage
+    /*
     if (isnan(st.x) || isnan(st.y)) {
       st = uv;
-    }
+    }*/
 
     //float u = (gl_FragCoord.x + random2(g_seed).x) / (canvasDimensions.x - 1.);
     //float v = (gl_FragCoord.y + random2(g_seed).y) / (canvasDimensions.y - 1.);
@@ -314,14 +321,14 @@ const fs = `
     vec3 pixelColor = rayColor(r, spheres);
     //vec3 pixelColor = random3(g_seed);
 
-    vec4 inputColor = texture2D(outputTex, uv);
+    vec4 inputColor = texture2D(inputTex, uv);
 
     // sample + gamma corr.
     //float scale = 1. / float(SAMPLES_PPX);
     //pixelColor = (vec4(pixelColor, 1) + currentColor) / 2.;
     // gl_FragColor is a special variable a fragment shader
     // is responsible for setting
-    gl_FragColor = vec4(pixelColor, 1) / niter + inputColor;
+    gl_FragColor = vec4(pixelColor, 1) + inputColor;
   }
 `;
 
@@ -343,10 +350,11 @@ const drawFS = `
 
   uniform sampler2D outputTex;
   uniform vec2 canvasDimensions;
+  uniform float niter;
 
   void main() {
     vec4 pixelColor = texture2D(outputTex, gl_FragCoord.xy / canvasDimensions);
-    gl_FragColor = pixelColor;
+    gl_FragColor = sqrt(pixelColor / niter);
   }
 `;
 
@@ -358,10 +366,28 @@ function main() {
     return;
   }
 
+  // check we can use floating point textures
+  const ext1 = gl.getExtension('OES_texture_float');
+  if (!ext1) {
+    alert('Need OES_texture_float');
+    return;
+  }
+  // check we can render to floating point textures
+  const ext2 = gl.getExtension('WEBGL_color_buffer_float');
+  if (!ext2) {
+    alert('Need WEBGL_color_buffer_float');
+    return;
+  }
+  // check we can use textures in a vertex shader
+  if (gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS) < 1) {
+    alert('Can not use textures in vertex shaders');
+    return;
+  }
+
   canvas.height = 400;
   canvas.width = 600;
 
-  console.log(canvas.height * canvas.width)
+  //console.log(canvas.height * canvas.width)
 
   // create GLSL shaders, upload the GLSL source, compile the shaders
   const vertexShader = createShader(gl, gl.VERTEX_SHADER, vs);
@@ -377,13 +403,14 @@ function main() {
   // look up where the vertex data needs to go.
   const positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
   const canvasDimensionsLocation = gl.getUniformLocation(program, 'canvasDimensions');
-  const outputTexLocation = gl.getUniformLocation(program, 'outputTex');
+  const inputTexLocation = gl.getUniformLocation(program, 'inputTex');
   const timeLocation = gl.getUniformLocation(program, 'time');
   const niterLocation = gl.getUniformLocation(program, 'niter');
 
   const drawPositionAttributeLocation = gl.getAttribLocation(drawProgram, 'a_position');
   const drawCanvasDimensionsLocation = gl.getUniformLocation(drawProgram, 'canvasDimensions');
   const drawOutputTexLocation = gl.getUniformLocation(drawProgram, 'outputTex');
+  const drawNiterLocation = gl.getUniformLocation(drawProgram, 'niter');
 
   // Create a buffer and put three 2d clip space points in it
   const positionBuffer = gl.createBuffer();
@@ -401,30 +428,34 @@ function main() {
   ];
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
-  const texdata = new Uint8Array(
+  const texdata = new Float32Array(
     new Array(canvas.width * canvas.height).fill(0)
       .map(() => [0, 0, 0, 0]).flat()
   );
-  const texdata2 = new Uint8Array(
+  /*const texdata2 = new Float32Array(
     new Array(canvas.width * canvas.height).fill(0)
+      .map(() => [0, 0, 0, 0]).flat()
+  );*/
+  const texdatar = new Float32Array(
+    new Array(canvas.width * canvas.height * 4).fill(0)
       .map(() => [0, 0, 0, 0]).flat()
   );
 
-  const outputTex = createTexture(gl, texdata, canvas.width, canvas.height);
-  const outputTex2 = createTexture(gl, texdata2, canvas.width, canvas.height);
+  const tex1 = createTexture(gl, texdata, canvas.width, canvas.height);
+  const tex2 = createTexture(gl, texdata, canvas.width, canvas.height);
 
-  let output1 = {
-    outputTex: outputTex,
-    outputFB: createFramebuffer(gl, outputTex)
+  let input = {
+    tex: tex1,
+    FB: createFramebuffer(gl, tex1)
   };
-  let output2 = {
-    outputTex: outputTex2,
-    outputFB: createFramebuffer(gl, outputTex2)
+  let output = {
+    tex: tex2,
+    FB: createFramebuffer(gl, tex2)
   };
 
   // code above this line is initialization code.
   // code below this line is rendering code.
-  const niter = 60;
+  const niter = 1;
   // Clear the canvas
   //webglUtils.resizeCanvasToDisplaySize(gl.canvas);
   gl.clearColor(0, 0, 0, 0);
@@ -435,8 +466,7 @@ function main() {
 
   for (let i = 0; i < niter; i++) {
 
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, output1.outputFB);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, output.FB);
     // Tell it to use our program (pair of shaders)
     gl.useProgram(program);
 
@@ -455,13 +485,13 @@ function main() {
     gl.vertexAttribPointer(drawPositionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, output2.outputTex);
+    gl.bindTexture(gl.TEXTURE_2D, input.tex);
 
-    gl.uniform1i(outputTexLocation, 0);
+    gl.uniform1i(inputTexLocation, 0);
     gl.uniform2f(canvasDimensionsLocation, gl.canvas.width, gl.canvas.height);
     const t = Date.now() / 1000;
     const i = parseInt((t - parseInt(t)) * 1000);
-    gl.uniform1f(timeLocation, i);
+    gl.uniform1f(timeLocation, rand(0, 10));
     gl.uniform1f(niterLocation, niter);
 
     // draw
@@ -491,18 +521,19 @@ function main() {
     gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, output2.outputTex);
+    gl.bindTexture(gl.TEXTURE_2D, output.tex);
 
     gl.uniform1i(drawOutputTexLocation, 0);
     gl.uniform2f(drawCanvasDimensionsLocation, gl.canvas.width, gl.canvas.height);
+    gl.uniform1f(drawNiterLocation, niter);
 
     // draw
     // primitiveType, offset, count
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-    const t1 = output1;
-    output1 = output2;
-    output2 = t1;
+    const t1 = output;
+    output = input;
+    input = t1;
 
     /*const t1 = outputFB1;
     outputFB1 = outputFB2;
