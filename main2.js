@@ -83,6 +83,7 @@ const fs = `
   precision highp float;
 
   uniform sampler2D inputTex;
+  uniform sampler2D randTex;
   uniform vec2 canvasDimensions;
   uniform float time;
   uniform float niter;
@@ -158,10 +159,6 @@ const fs = `
 
   float _x;
 
-  void seed(float s) {
-    _x = s;
-  }
-
   float randomLCG() {
     const float m = pow(2., 63.) - 1.;
     const float a = 48271.;
@@ -172,6 +169,14 @@ const fs = `
   float random(float min, float max) {
     float r = randomLCG() / (pow(2., 63.) - 1.);
     return min + (max - min) * r;
+  }
+
+  void seed(float s) {
+    _x = s;
+    float s1;
+    for (int s = 0; s < 5; s++) {
+      s1 = random(0., 1.);
+    }
   }
 
   vec2 randomVec2(float min, float max) {
@@ -251,20 +256,19 @@ const fs = `
     float t = 0.5 * (normalize(r.direction).y + 1.);
     vec3 col = (1. - t) * vec3(1., 1., 1.) + t * vec3(0.5, 0.7, 1.0);
 
-    for (int s = 0; s < 2; s++) {
+    for (int s = 0; s < 35; s++) {
 
-      bool hit = worldHit(spheres, r, 0., 99999., rec);
+      bool hit = worldHit(spheres, r, 0.001, 99999., rec);
 
       if (!hit) {
         return col;
       }
       vec3 jitter = randomInUnitSphere();
-      /*if (isnan(jitter.r) || isnan(jitter.g) || isnan(jitter.b)) {
-        jitter = vec3(0.);
-      }*/
+
       vec3 target = rec.p + rec.normal + jitter;
       r = Ray(rec.p, target - rec.p);
       col = 0.5 * col;
+      //col = 0.5 * (rec.normal + vec3(1,1,1));
     }
 
     return col;
@@ -273,13 +277,8 @@ const fs = `
   void main() {
     vec2 uv = gl_FragCoord.xy / canvasDimensions;
 
-    /*
-    g_seed = random(gl_FragCoord.xy * (mod(time, 100.)));
-    if(isnan(g_seed)){
-      g_seed = 0.25;
-    }
-    */
-    seed(gl_FragCoord.x * gl_FragCoord.y * time);
+    seed(texture2D(randTex, uv).x * time);
+
 
     float aspectRatio = canvasDimensions.x / canvasDimensions.y;
 
@@ -298,36 +297,18 @@ const fs = `
     Sphere spheres[NSPHERES];
     spheres[0] = Sphere(vec3(0, 0, -1), 0.5);
     spheres[1] = Sphere(vec3(0, -100.5, -1), 100.);
-    //spheres[1] = Sphere(vec3(0, 1, -1), 0.4);
 
-    //vec3 pixelColor = vec3(0, 0, 0);
 
-    // anti aliasing
-    vec2 jitter = (2. * randomVec2(0., 1.)) - 1.;
-    vec2 st = uv;
-    // check for NaN leakage
-    /*
-    if (isnan(st.x) || isnan(st.y)) {
-      st = uv;
-    }*/
-
-    //float u = (gl_FragCoord.x + random2(g_seed).x) / (canvasDimensions.x - 1.);
-    //float v = (gl_FragCoord.y + random2(g_seed).y) / (canvasDimensions.y - 1.);
+    vec2 st = (gl_FragCoord.xy + randomVec2(0., 1.)) / (canvasDimensions - 1.);
 
     Ray r = Ray(
       origin,
       lowerLeftCorner + st.x * horizontal + st.y * vertical - origin
     );
     vec3 pixelColor = rayColor(r, spheres);
-    //vec3 pixelColor = random3(g_seed);
 
     vec4 inputColor = texture2D(inputTex, uv);
 
-    // sample + gamma corr.
-    //float scale = 1. / float(SAMPLES_PPX);
-    //pixelColor = (vec4(pixelColor, 1) + currentColor) / 2.;
-    // gl_FragColor is a special variable a fragment shader
-    // is responsible for setting
     gl_FragColor = vec4(pixelColor, 1) + inputColor;
   }
 `;
@@ -404,6 +385,7 @@ function main() {
   const positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
   const canvasDimensionsLocation = gl.getUniformLocation(program, 'canvasDimensions');
   const inputTexLocation = gl.getUniformLocation(program, 'inputTex');
+  const randTexLocation = gl.getUniformLocation(program, 'randTex');
   const timeLocation = gl.getUniformLocation(program, 'time');
   const niterLocation = gl.getUniformLocation(program, 'niter');
 
@@ -436,10 +418,6 @@ function main() {
     new Array(canvas.width * canvas.height).fill(0)
       .map(() => [0, 0, 0, 0]).flat()
   );*/
-  const texdatar = new Float32Array(
-    new Array(canvas.width * canvas.height * 4).fill(0)
-      .map(() => [0, 0, 0, 0]).flat()
-  );
 
   const tex1 = createTexture(gl, texdata, canvas.width, canvas.height);
   const tex2 = createTexture(gl, texdata, canvas.width, canvas.height);
@@ -455,7 +433,7 @@ function main() {
 
   // code above this line is initialization code.
   // code below this line is rendering code.
-  const niter = 1;
+  const niter = 100;
   // Clear the canvas
   //webglUtils.resizeCanvasToDisplaySize(gl.canvas);
   gl.clearColor(0, 0, 0, 0);
@@ -463,6 +441,12 @@ function main() {
 
   // Tell WebGL how to convert from clip space to pixels
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+  const texdatarand = new Float32Array(
+    new Array(canvas.width * canvas.height * 4).fill(0)
+      .map(() => [ rand(0, 1000), 0, 0, 0 ]).flat()
+  );
+  const texr = createTexture(gl, texdatarand, canvas.width, canvas.height);
 
   for (let i = 0; i < niter; i++) {
 
@@ -487,13 +471,18 @@ function main() {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, input.tex);
 
+    gl.activeTexture(gl.TEXTURE0 + 1);
+    gl.bindTexture(gl.TEXTURE_2D, texr);
+
     gl.uniform1i(inputTexLocation, 0);
     gl.uniform2f(canvasDimensionsLocation, gl.canvas.width, gl.canvas.height);
     const t = Date.now() / 1000;
     const i = parseInt((t - parseInt(t)) * 1000);
-    gl.uniform1f(timeLocation, rand(0, 10));
+    console.log(i)
+    gl.uniform1f(timeLocation, i);
     gl.uniform1f(niterLocation, niter);
 
+    gl.uniform1i(randTexLocation, 1);
     // draw
     // primitiveType, offset, count
     gl.drawArrays(gl.TRIANGLES, 0, 6);
