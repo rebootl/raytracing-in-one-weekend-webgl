@@ -223,11 +223,12 @@ const fs = `
   vec3 rayColor(Ray r, const Sphere[NSPHERES] spheres) {
 
     hitRecord rec;
-    vec3 col = vec3(0.);
+
+    vec3 col = vec3(1.);
 
     for (int s = 0; s < MAX_DEPTH; s++) {
 
-      bool hit = worldHit(spheres, r, 0.001, 99999., rec);
+      bool hit = worldHit(spheres, r, 0.001, MAX_FLOAT, rec);
 
       if (hit) {
         vec3 jitter = random_unit(g_seed);
@@ -235,20 +236,21 @@ const fs = `
           jitter = vec3(0.);
         }
 
+        col = 0.5 * col;
         vec3 target = rec.p + rec.normal + jitter;
         r = Ray(rec.p, normalize(target - rec.p));
-
-        col = 0.5 * col;
-        // (normal)
         //col = 0.5 * (rec.normal + vec3(1,1,1));
       } else {
         // background
-        float t = 0.5 * (normalize(r.direction).y + 1.);
-        col = (1. - t) * vec3(1., 1., 1.) + t * vec3(0.5, 0.7, 1.0);
+        /*float t = 0.5 * (normalize(r.direction).y + 1.);
+        vec3 col = (1. - t) * vec3(1., 1., 1.) + t * vec3(0.5, 0.7, 1.0);
+        return col;
+        */
+        float t = 0.5 * (normalize(r.direction).y + 1.0);
+        col *= mix(vec3(1.0), vec3(0.5,0.7,1.0), t);
         return col;
       }
     }
-
     return col;
   }
 
