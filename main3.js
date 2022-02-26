@@ -86,7 +86,7 @@ const fs = `
   uniform vec2 canvasDimensions;
   uniform float time;
 
-  const int NSPHERES = 2;
+  const int NSPHERES = 4;
   const int MAX_DEPTH = 5;
 
 
@@ -184,7 +184,7 @@ const fs = `
     if(isnan(jitter.r) || isnan(jitter.g) || isnan(jitter.b)){
       jitter = vec3(0.);
     }
-    
+
     vec3 scatterDirection = rec.normal + jitter;
     if (nearZero(scatterDirection)) {
       scatterDirection = rec.normal;
@@ -195,6 +195,14 @@ const fs = `
     //r.direction = normalize(target - rec.p);
     r.direction = scatterDirection;
 
+    col = col * rec.m.color;
+    return col;
+  }
+
+  vec3 metalMat(inout Ray r, hitRecord rec, vec3 col) {
+    vec3 reflected = reflect(normalize(r.direction), rec.normal);
+    r.origin = rec.p;
+    r.direction = reflected;
     col = col * rec.m.color;
     return col;
   }
@@ -264,7 +272,12 @@ const fs = `
 
       if (hit) {
 
-        col = diffuseMat(r, rec, col);
+        if (rec.m.type == 0) {
+          col = diffuseMat(r, rec, col);
+        }
+        if (rec.m.type == 1) {
+          col = metalMat(r, rec, col);
+        }
 
         // normal
         //col = 0.5 * (rec.normal + vec3(1,1,1));
@@ -307,13 +320,14 @@ const fs = `
 
     Material m1 = Material(0, vec3(0.7, 0.3, 0.3), 1.);
     Material m2 = Material(0, vec3(0.8, 0.8, 0.0), 1.);
+    Material m3 = Material(1, vec3(0.8, 0.8, 0.8), 1.);
+    Material m4 = Material(1, vec3(0.8, 0.6, 0.2), 1.);
 
     Sphere spheres[NSPHERES];
     spheres[0] = Sphere(vec3(0, 0, -1), 0.5, m1);
     spheres[1] = Sphere(vec3(0, -100.5, -1), 100., m2);
-
-
-    //vec2 st = (gl_FragCoord.xy + randomVec2(0., 1.)) / (canvasDimensions - 1.);
+    spheres[2] = Sphere(vec3(-1, 0, -1), 0.5, m3);
+    spheres[3] = Sphere(vec3(1, 0, -1), 0.5, m4);
 
     // anti aliasing
     vec2 jitter = (2. * random2(g_seed)) - 1.;
