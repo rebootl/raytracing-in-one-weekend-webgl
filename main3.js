@@ -98,8 +98,11 @@ const fs = `
   #define PHI 1.61803398874989484820459
 
 
-  float g_seed = 0.25;
+  float deg2rad(float d) {
+    return PI * d / 180.0;
+  }
 
+  float g_seed = 0.25;
 
   // random number generator
 
@@ -210,6 +213,13 @@ const fs = `
     return col;
   }
 
+  float reflectance(float cosine, float ref_idx) {
+      // Use Schlick's approximation for reflectance.
+      float r0 = (1. - ref_idx) / (1. + ref_idx);
+      r0 = r0 * r0;
+      return r0 + (1. - r0) * pow((1. - cosine), 5.);
+  }
+
   vec3 refractMat(inout Ray r, hitRecord rec, vec3 col) {
     float ir = 1.5;
     float rratio = rec.frontFace ? (1.0/ir) : ir;
@@ -221,12 +231,11 @@ const fs = `
     bool cannotRefract = (rratio * sin_theta > 1.0);
     vec3 direction;
 
-    if (cannotRefract)
+    if (cannotRefract || reflectance(cos_theta, rratio) > random2(g_seed).x)
         direction = reflect(unitDir, rec.normal);
     else
         direction = refract(unitDir, rec.normal, rratio);
 
-    //vec3 refracted = refract(normalize(r.direction), rec.normal, rratio);
     r.origin = rec.p;
     r.direction = direction;
     col = col * vec3(1., 1., 1.);
@@ -334,23 +343,35 @@ const fs = `
     }
 
     float aspectRatio = canvasDimensions.x / canvasDimensions.y;
+    float vfov = 90.;
+
+    vec3 lookFrom = vec3(-2, 2, 1);
+    vec3 lookAt = vec3(0, 0, -1);
+    vec3 vUp = vec3(0, 1, 0);
 
     // Camera
 
-    const float viewportHeight = 2.0;
+    float theta = deg2rad(vfov);
+    float h = tan(theta/2.);
+
+    float viewportHeight = 2.0 * h;
     float viewportWidth = aspectRatio * viewportHeight;
     const float focalLength = 1.0;
 
-    const vec3 origin = vec3(0, 0, 0);
-    vec3 horizontal = vec3(viewportWidth, 0, 0);
-    vec3 vertical = vec3(0, viewportHeight, 0);
-    vec3 lowerLeftCorner = origin - horizontal / 2. - vertical / 2.
-      - vec3(0, 0, focalLength);
+    vec3 w = normalize(lookFrom - lookAt);
+    vec3 u = normalize(cross(vUp, w));
+    vec3 v = cross(w, u);
 
-    Material m1 = Material(2, vec3(0.7, 0.3, 0.3), 1.);
+    vec3 origin = lookFrom;
+    vec3 horizontal = viewportWidth * u;
+    vec3 vertical = viewportHeight * v;
+    vec3 lowerLeftCorner = origin - horizontal / 2. - vertical / 2.
+      - w;
+
+    Material m1 = Material(0, vec3(0.7, 0.3, 0.3), 1.);
     Material m2 = Material(0, vec3(0.8, 0.8, 0.0), 1.);
     Material m3 = Material(2, vec3(0.8, 0.8, 0.8), 0.);
-    Material m4 = Material(1, vec3(0.8, 0.6, 0.2), 0.6);
+    Material m4 = Material(1, vec3(0.8, 0.6, 0.2), 0.8);
 
     Sphere spheres[NSPHERES];
     spheres[0] = Sphere(vec3(0, 0, -1), 0.5, m1);
