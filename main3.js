@@ -167,7 +167,26 @@ const fs = `
     bool frontFace;
   };
 
+  struct Material {
+    int type;
+    vec3 color;
+    float scatter;
+  }
 
+
+  vec3 diffuseMat(inout Ray r, hitRecord rec, vec3 col) {
+    vec3 jitter = random_unit(g_seed);
+    if(isnan(jitter.r) || isnan(jitter.g) || isnan(jitter.b)){
+      jitter = vec3(0.);
+    }
+
+    vec3 target = rec.p + rec.normal + jitter;
+    r.origin = rec.p;
+    r.direction = normalize(target - rec.p);
+
+    col = 0.5 * col;
+    return col;
+  }
 
   void setFaceNormal(const Ray r, const vec3 outwardNormal, inout hitRecord rec) {
     rec.frontFace = dot(r.direction, outwardNormal) < 0.;
@@ -231,14 +250,10 @@ const fs = `
       bool hit = worldHit(spheres, r, 0.001, MAX_FLOAT, rec);
 
       if (hit) {
-        vec3 jitter = random_unit(g_seed);
-        if(isnan(jitter.r) || isnan(jitter.g) || isnan(jitter.b)){
-          jitter = vec3(0.);
-        }
 
-        col = 0.5 * col;
-        vec3 target = rec.p + rec.normal + jitter;
-        r = Ray(rec.p, normalize(target - rec.p));
+        col = diffuseMat(r, rec, col);
+
+        // normal
         //col = 0.5 * (rec.normal + vec3(1,1,1));
       } else {
         // background
