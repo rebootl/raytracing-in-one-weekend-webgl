@@ -157,7 +157,7 @@ const fs = `
   struct Material {
     int type;
     vec3 color;
-    float scatter;
+    float fuzz;
   };
 
   struct Sphere {
@@ -179,13 +179,16 @@ const fs = `
     return (abs(v.x) < s && abs(v.y) < s && abs(v.z) < s);
   }
 
-  vec3 diffuseMat(inout Ray r, hitRecord rec, vec3 col) {
-    vec3 jitter = random_unit(g_seed);
-    if(isnan(jitter.r) || isnan(jitter.g) || isnan(jitter.b)){
-      jitter = vec3(0.);
+  vec3 jitter() {
+    vec3 j = random_unit(g_seed);
+    if(isnan(j.r) || isnan(j.g) || isnan(j.b)){
+      j = vec3(0.);
     }
+    return j;
+  }
 
-    vec3 scatterDirection = rec.normal + jitter;
+  vec3 diffuseMat(inout Ray r, hitRecord rec, vec3 col) {
+    vec3 scatterDirection = rec.normal + jitter();
     if (nearZero(scatterDirection)) {
       scatterDirection = rec.normal;
     }
@@ -202,7 +205,7 @@ const fs = `
   vec3 metalMat(inout Ray r, hitRecord rec, vec3 col) {
     vec3 reflected = reflect(normalize(r.direction), rec.normal);
     r.origin = rec.p;
-    r.direction = reflected;
+    r.direction = reflected + jitter() * rec.m.fuzz;
     col = col * rec.m.color;
     return col;
   }
@@ -320,8 +323,8 @@ const fs = `
 
     Material m1 = Material(0, vec3(0.7, 0.3, 0.3), 1.);
     Material m2 = Material(0, vec3(0.8, 0.8, 0.0), 1.);
-    Material m3 = Material(1, vec3(0.8, 0.8, 0.8), 1.);
-    Material m4 = Material(1, vec3(0.8, 0.6, 0.2), 1.);
+    Material m3 = Material(1, vec3(0.8, 0.8, 0.8), 0.);
+    Material m4 = Material(1, vec3(0.8, 0.6, 0.2), 0.6);
 
     Sphere spheres[NSPHERES];
     spheres[0] = Sphere(vec3(0, 0, -1), 0.5, m1);
