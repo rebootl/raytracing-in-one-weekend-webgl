@@ -87,7 +87,7 @@ const fs = `
   uniform float time;
 
   const int NSPHERES = 4;
-  const int MAX_DEPTH = 5;
+  const int MAX_DEPTH = 25;
 
 
   #define MAX_FLOAT 1e5
@@ -210,6 +210,29 @@ const fs = `
     return col;
   }
 
+  vec3 refractMat(inout Ray r, hitRecord rec, vec3 col) {
+    float ir = 1.5;
+    float rratio = rec.frontFace ? (1.0/ir) : ir;
+
+    vec3 unitDir = normalize(r.direction);
+    float cos_theta = min(dot(-unitDir, rec.normal), 1.0);
+    float sin_theta = sqrt(1.0 - cos_theta*cos_theta);
+
+    bool cannotRefract = (rratio * sin_theta > 1.0);
+    vec3 direction;
+
+    if (cannotRefract)
+        direction = reflect(unitDir, rec.normal);
+    else
+        direction = refract(unitDir, rec.normal, rratio);
+
+    //vec3 refracted = refract(normalize(r.direction), rec.normal, rratio);
+    r.origin = rec.p;
+    r.direction = direction;
+    col = col * vec3(1., 1., 1.);
+    return col;
+  }
+
   void setFaceNormal(const Ray r, const vec3 outwardNormal, inout hitRecord rec) {
     rec.frontFace = dot(r.direction, outwardNormal) < 0.;
     rec.normal = rec.frontFace ? outwardNormal : -outwardNormal;
@@ -281,6 +304,9 @@ const fs = `
         if (rec.m.type == 1) {
           col = metalMat(r, rec, col);
         }
+        if (rec.m.type == 2) {
+          col = refractMat(r, rec, col);
+        }
 
         // normal
         //col = 0.5 * (rec.normal + vec3(1,1,1));
@@ -321,9 +347,9 @@ const fs = `
     vec3 lowerLeftCorner = origin - horizontal / 2. - vertical / 2.
       - vec3(0, 0, focalLength);
 
-    Material m1 = Material(0, vec3(0.7, 0.3, 0.3), 1.);
+    Material m1 = Material(2, vec3(0.7, 0.3, 0.3), 1.);
     Material m2 = Material(0, vec3(0.8, 0.8, 0.0), 1.);
-    Material m3 = Material(1, vec3(0.8, 0.8, 0.8), 0.);
+    Material m3 = Material(2, vec3(0.8, 0.8, 0.8), 0.);
     Material m4 = Material(1, vec3(0.8, 0.6, 0.2), 0.6);
 
     Sphere spheres[NSPHERES];
