@@ -422,7 +422,7 @@ function main() {
 
   // code above this line is initialization code.
   // code below this line is rendering code.
-  const niter = 250;
+  let niter = 0;
   // Clear the canvas
   //webglUtils.resizeCanvasToDisplaySize(gl.canvas);
   gl.clearColor(0, 0, 0, 0);
@@ -431,7 +431,8 @@ function main() {
   // Tell WebGL how to convert from clip space to pixels
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-  for (let i = 0; i < niter; i++) {
+  //for (let i = 0; i < niter; i++) {
+  function render() {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, output.FB);
     // Tell it to use our program (pair of shaders)
@@ -501,7 +502,34 @@ function main() {
     const t1 = output;
     output = input;
     input = t1;
+
+    const n = document.querySelector('.niter');
+    n.textContent = niter;
+    niter++;
+    if (run) {
+      requestAnimationFrame(render);
+    }
   }
+  return render;
 }
 
-main();
+let run = true;
+
+function reset() {
+  run = false;
+  const r = main();
+  run = true;
+  requestAnimationFrame(r);
+  return r;
+}
+
+let r = reset();
+
+function toggle() {
+  if (run) {
+    run = false;
+  } else {
+    run = true;
+    requestAnimationFrame(r);
+  }
+}
