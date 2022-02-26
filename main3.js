@@ -154,10 +154,16 @@ const fs = `
     vec3 direction;
   };
 
+  struct Material {
+    int type;
+    vec3 color;
+    float scatter;
+  };
+
   struct Sphere {
     vec3 center;
     float radius;
-    // .. mat. etc.
+    Material mat;
   };
 
   struct hitRecord {
@@ -165,26 +171,31 @@ const fs = `
     vec3 normal;
     float t;
     bool frontFace;
+    Material m;
   };
 
-  struct Material {
-    int type;
-    vec3 color;
-    float scatter;
+  bool nearZero(vec3 v) {
+    float s = 1e-8;
+    return (abs(v.x) < s && abs(v.y) < s && abs(v.z) < s);
   }
-
 
   vec3 diffuseMat(inout Ray r, hitRecord rec, vec3 col) {
     vec3 jitter = random_unit(g_seed);
     if(isnan(jitter.r) || isnan(jitter.g) || isnan(jitter.b)){
       jitter = vec3(0.);
     }
+    
+    vec3 scatterDirection = rec.normal + jitter;
+    if (nearZero(scatterDirection)) {
+      scatterDirection = rec.normal;
+    }
 
-    vec3 target = rec.p + rec.normal + jitter;
+    vec3 target = rec.p + scatterDirection;
     r.origin = rec.p;
-    r.direction = normalize(target - rec.p);
+    //r.direction = normalize(target - rec.p);
+    r.direction = scatterDirection;
 
-    col = 0.5 * col;
+    col = col * rec.m.color;
     return col;
   }
 
@@ -220,6 +231,8 @@ const fs = `
     rec.p = at(root, r);
     vec3 outwardNormal = (rec.p - s.center) / s.radius;
     setFaceNormal(r, outwardNormal, rec);
+
+    rec.m = s.mat;
     return true;
   }
 
@@ -292,9 +305,12 @@ const fs = `
     vec3 lowerLeftCorner = origin - horizontal / 2. - vertical / 2.
       - vec3(0, 0, focalLength);
 
+    Material m1 = Material(0, vec3(0.7, 0.3, 0.3), 1.);
+    Material m2 = Material(0, vec3(0.8, 0.8, 0.0), 1.);
+
     Sphere spheres[NSPHERES];
-    spheres[0] = Sphere(vec3(0, 0, -1), 0.5);
-    spheres[1] = Sphere(vec3(0, -100.5, -1), 100.);
+    spheres[0] = Sphere(vec3(0, 0, -1), 0.5, m1);
+    spheres[1] = Sphere(vec3(0, -100.5, -1), 100., m2);
 
 
     //vec2 st = (gl_FragCoord.xy + randomVec2(0., 1.)) / (canvasDimensions - 1.);
