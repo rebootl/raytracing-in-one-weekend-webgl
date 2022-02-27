@@ -89,8 +89,8 @@ function getFS() {
   //addSpheres += `spheres[${c}] = Sphere(vec3(1, 0, 0.5), 0.2, m2);`;
 
   let c = 5;
-  for (let a = -4; a < 4; a++) {
-    for (let b = -4; b < 4; b++) {
+  for (let a = -3; a < 2; a++) {
+    for (let b = -2; b < 1; b++) {
       const choose_mat = rand(0, 1);
       const cx = a + 0.9 * rand(0, 1);
       const cy = 0.2;
@@ -121,7 +121,7 @@ function getFS() {
       }
     }
   }
-  console.log(addSpheres)
+  //console.log(addSpheres)
   return `
   // fragment shaders don't have a default precision so we need
   // to pick one. mediump is a good default
@@ -502,8 +502,8 @@ function main() {
     return;
   }
 
-  canvas.width = 600;
-  canvas.height = 400;
+  canvas.width = parseInt(document.querySelector('.cx').value);
+  canvas.height = parseInt(document.querySelector('.cy').value);
 
   //console.log(canvas.height * canvas.width)
 
