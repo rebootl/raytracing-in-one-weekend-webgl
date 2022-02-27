@@ -77,7 +77,52 @@ const vs = `
   }
 `;
 
-const fs = `
+function getFS() {
+
+  let addMaterials = `
+  //Material m5 = Material(1, vec3(0.8, 0.6, 0.2), 0.8);
+  `;
+
+  let addSpheres = `
+  //spheres[4] = Sphere(vec3(1, 0, -0.5), 0.5, m4);
+  `;
+  //addSpheres += `spheres[${c}] = Sphere(vec3(1, 0, 0.5), 0.2, m2);`;
+
+  let c = 5;
+  for (let a = -11; a < 11; a++) {
+    for (let b = -11; b < 11; b++) {
+      const choose_mat = rand(0, 1);
+      const cx = a + 0.9 * rand(0, 1);
+      const cy = 0.2;
+      const cz = b + 0.9 * rand(0, 1);
+
+      if (Math.sqrt((Math.pow(cx - 4, 2) + Math.pow(cy- 0.2, 2) + Math.pow(cz), 3))) {
+        if (choose_mat < 0.8) {
+          // diffuse
+          const rx = rand(0, 1) * rand(0, 1);
+          const ry = rand(0, 1) * rand(0, 1);
+          const rz = rand(0, 1) * rand(0, 1);
+          addMaterials += `Material m${c} = Material(0, vec3(${rx}, ${ry}, ${rz}), 0.8);`;
+          addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), 0.2, m${c});`;
+        } else if (choose_mat < 0.95) {
+          // metal
+          const rx = rand(0.5, 1);
+          const ry = rand(0.5, 1);
+          const rz = rand(0.5, 1);
+          const fuzz = rand(0, 0.5);
+          addMaterials += `Material m${c} = Material(1, vec3(${rx}, ${ry}, ${rz}), ${fuzz});`;
+          addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), 0.2, m${c});`;
+        } else {
+          // glass
+          addMaterials += `Material m${c} = Material(2, vec3(0.), 1.);`;
+          addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), 0.2, m${c});`;
+        }
+        c++;
+      }
+    }
+  }
+  console.log(addSpheres)
+  return `
   // fragment shaders don't have a default precision so we need
   // to pick one. mediump is a good default
   precision mediump float;
@@ -86,8 +131,8 @@ const fs = `
   uniform vec2 canvasDimensions;
   uniform float time;
 
-  const int NSPHERES = 4;
-  const int MAX_DEPTH = 25;
+  const int NSPHERES = ${c};
+  const int MAX_DEPTH = 5;
 
 
   #define MAX_FLOAT 1e5
@@ -134,7 +179,7 @@ const fs = `
       );
   }
 
-  vec3 random_in_unit_sphere( float seed) {
+  vec3 random_in_unit_sphere(float seed) {
     vec2 tp = random2(seed);
     float theta = tp.x * TAU;
     float phi = tp.y * TAU;
@@ -279,13 +324,13 @@ const fs = `
     return true;
   }
 
-  bool worldHit(const Sphere[NSPHERES] spheres, const Ray r, const float tMin,
+  bool worldHit(const Sphere[${c}] spheres, const Ray r, const float tMin,
       const float tMax, out hitRecord rec) {
     hitRecord tempRec;
     bool hitAnything = false;
     float closestSoFar = tMax;
 
-    for (int i = 0; i < NSPHERES; i++) {
+    for (int i = 0; i < ${c}; i++) {
       if (hitSphere(spheres[i], r, tMin, closestSoFar, tempRec)) {
         hitAnything = true;
         closestSoFar = tempRec.t;
@@ -295,7 +340,7 @@ const fs = `
     return hitAnything;
   }
 
-  vec3 rayColor(Ray r, const Sphere[NSPHERES] spheres) {
+  vec3 rayColor(Ray r, const Sphere[${c}] spheres) {
 
     hitRecord rec;
 
@@ -343,10 +388,10 @@ const fs = `
     }
 
     float aspectRatio = canvasDimensions.x / canvasDimensions.y;
-    float vfov = 90.;
+    float vfov = 20.;
 
-    vec3 lookFrom = vec3(-2, 2, 1);
-    vec3 lookAt = vec3(0, 0, -1);
+    vec3 lookFrom = vec3(13, 2, 3);
+    vec3 lookAt = vec3(0, 0, 0);
     vec3 vUp = vec3(0, 1, 0);
 
     // Camera
@@ -368,16 +413,18 @@ const fs = `
     vec3 lowerLeftCorner = origin - horizontal / 2. - vertical / 2.
       - w;
 
-    Material m1 = Material(0, vec3(0.7, 0.3, 0.3), 1.);
-    Material m2 = Material(0, vec3(0.8, 0.8, 0.0), 1.);
-    Material m3 = Material(2, vec3(0.8, 0.8, 0.8), 0.);
-    Material m4 = Material(1, vec3(0.8, 0.6, 0.2), 0.8);
+    Material m1 = Material(0, vec3(0.5, 0.5, 0.5), 1.);
+    Material m2 = Material(2, vec3(0.7, 0.3, 0.3), 1.);
+    Material m3 = Material(0, vec3(0.4, 0.2, 0.1), 0.1);
+    Material m4 = Material(1, vec3(0.7, 0.6, 0.5), 0.0);
+    ${addMaterials}
 
-    Sphere spheres[NSPHERES];
-    spheres[0] = Sphere(vec3(0, 0, -1), 0.5, m1);
-    spheres[1] = Sphere(vec3(0, -100.5, -1), 100., m2);
-    spheres[2] = Sphere(vec3(-1, 0, -1), 0.5, m3);
-    spheres[3] = Sphere(vec3(1, 0, -1), 0.5, m4);
+    Sphere spheres[${c}];
+    spheres[0] = Sphere(vec3(0, -1000, 0), 1000., m1);
+    spheres[1] = Sphere(vec3(0, 1, 0), 1., m2);
+    spheres[2] = Sphere(vec3(-4, 1, 0), 1., m3);
+    spheres[3] = Sphere(vec3(4, 1, 0), 1., m4);
+    ${addSpheres}
 
     // anti aliasing
     vec2 jitter = (2. * random2(g_seed)) - 1.;
@@ -401,6 +448,7 @@ const fs = `
     gl_FragColor = result;
   }
 `;
+}
 
 const drawVS = `
   // an attribute will receive data from a buffer
@@ -461,7 +509,7 @@ function main() {
 
   // create GLSL shaders, upload the GLSL source, compile the shaders
   const vertexShader = createShader(gl, gl.VERTEX_SHADER, vs);
-  const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fs);
+  const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, getFS());
 
   const drawVertexShader = createShader(gl, gl.VERTEX_SHADER, drawVS);
   const drawFragmentShader = createShader(gl, gl.FRAGMENT_SHADER, drawFS);
