@@ -89,8 +89,8 @@ function getFS() {
   //addSpheres += `spheres[${c}] = Sphere(vec3(1, 0, 0.5), 0.2, m2);`;
 
   let c = 5;
-  for (let a = -11; a < 11; a++) {
-    for (let b = -11; b < 11; b++) {
+  for (let a = -4; a < 4; a++) {
+    for (let b = -4; b < 4; b++) {
       const choose_mat = rand(0, 1);
       const cx = a + 0.9 * rand(0, 1);
       const cy = 0.2;
@@ -657,13 +657,13 @@ function main() {
 }
 
 let run = false;
+let r;
 
 function reset() {
   run = false;
-  const r = main();
+  r = main();
   run = true;
   requestAnimationFrame(r);
-  return r;
 }
 
 function toggle() {
