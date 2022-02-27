@@ -14,6 +14,11 @@
 			font-family: monospace;
 			background-color: #b3bbc3;
 		}
+		.canvas {
+			display: flex;
+			justify-content: center;
+			margin-bottom: 8px;
+		}
 		.controls {
 			display: flex;
 			flex-flow: column;
@@ -22,9 +27,13 @@
 		input {
 			width: 50px;
 		}
+		.footer {
+			display: flex;
+			justify-content: center;
+		}
 	</style>
 
-	<div>
+	<div class="canvas">
   	<canvas id="canvas" height="400" width="600"></canvas>
 	</div>
 
@@ -54,6 +63,10 @@
 		</div>
 	</div>
 	<pre>Frames (Antialiasing): <span class="niter">0</span></pre>
+
+	<div class="footer">
+		<small><a href="https://github.com/rebootl/raytracing-in-one-weekend-webgl/">Code <3</a></small>
+	</div>
 
   </body>
 </html>
