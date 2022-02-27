@@ -502,8 +502,8 @@ function main() {
     return;
   }
 
-  canvas.height = 400;
   canvas.width = 600;
+  canvas.height = 400;
 
   //console.log(canvas.height * canvas.width)
 
@@ -656,7 +656,7 @@ function main() {
   return render;
 }
 
-let run = true;
+let run = false;
 
 function reset() {
   run = false;
@@ -665,8 +665,6 @@ function reset() {
   requestAnimationFrame(r);
   return r;
 }
-
-let r = reset();
 
 function toggle() {
   if (run) {
