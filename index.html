@@ -9,14 +9,49 @@
   </head>
   <body>
 
+	<style>
+		body {
+			font-family: monospace;
+		}
+		.controls {
+			display: flex;
+			flex-flow: column;
+			gap: 5px;
+		}
+		input {
+			width: 50px;
+		}
+	</style>
+
 	<div>
   	<canvas id="canvas" height="400" width="600"></canvas>
 	</div>
 
-	<input class="cx" placeholder="width" value="600"></input>
-	<input class="cy" placeholder="height" value="400"></input><br>
-	<button onclick="reset();">Start / Reset</button>
-	<button onclick="toggle();">Pause / Continue</button>
+	<div class="controls">
+		<button onclick="reset();">Start / Reset</button>
+		<button onclick="toggle();">Pause / Continue</button>
+		<div>
+			Canvas size:
+			<input id="cw" placeholder="width" value="600"></input>
+			<input id="ch" placeholder="height" value="400"></input>
+		</div>
+		<div>
+			Camera look from:
+			<input id="clfx" placeholder="x" value="0"></input>
+			<input id="clfy" placeholder="y" value="1"></input>
+			<input id="clfz" placeholder="z" value="5"></input>
+			look at:
+			<input id="clax" placeholder="x" value="0"></input>
+			<input id="clay" placeholder="y" value="1"></input>
+			<input id="claz" placeholder="z" value="0"></input>
+			fov:
+			<input id="fov" placeholder="fov" value="30"></input>
+		</div>
+		<div>
+			Number of balls:
+			<input id="nb" placeholder="n" value="20"></input>
+		</div>
+	</div>
 	<pre>Frames (Antialiasing): <span class="niter">0</span></pre>
 
   </body>

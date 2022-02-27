@@ -77,7 +77,7 @@ const vs = `
   }
 `;
 
-function getFS() {
+function getFS(clf, cla, fov, nb) {
 
   let addMaterials = `
   //Material m5 = Material(1, vec3(0.8, 0.6, 0.2), 0.8);
@@ -89,37 +89,37 @@ function getFS() {
   //addSpheres += `spheres[${c}] = Sphere(vec3(1, 0, 0.5), 0.2, m2);`;
 
   let c = 5;
-  for (let a = -3; a < 2; a++) {
-    for (let b = -2; b < 1; b++) {
-      const choose_mat = rand(0, 1);
-      const cx = a + 0.9 * rand(0, 1);
-      const cy = 0.2;
-      const cz = b + 0.9 * rand(0, 1);
+  for (let b = 0; b < nb; b++) {
+    const choose_mat = rand(0, 1);
+    const cx = rand(-2, 2);
+    const cy = rand(0, 2);
+    const cz = rand(-2, 2);
+    const s = rand(0.1, 0.5);
 
-      if (Math.sqrt((Math.pow(cx - 4, 2) + Math.pow(cy- 0.2, 2) + Math.pow(cz), 3))) {
-        if (choose_mat < 0.8) {
-          // diffuse
-          const rx = rand(0, 1) * rand(0, 1);
-          const ry = rand(0, 1) * rand(0, 1);
-          const rz = rand(0, 1) * rand(0, 1);
-          addMaterials += `Material m${c} = Material(0, vec3(${rx}, ${ry}, ${rz}), 0.8);`;
-          addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), 0.2, m${c});`;
-        } else if (choose_mat < 0.95) {
-          // metal
-          const rx = rand(0.5, 1);
-          const ry = rand(0.5, 1);
-          const rz = rand(0.5, 1);
-          const fuzz = rand(0, 0.5);
-          addMaterials += `Material m${c} = Material(1, vec3(${rx}, ${ry}, ${rz}), ${fuzz});`;
-          addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), 0.2, m${c});`;
-        } else {
-          // glass
-          addMaterials += `Material m${c} = Material(2, vec3(0.), 1.);`;
-          addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), 0.2, m${c});`;
-        }
-        c++;
-      }
+    //if (Math.sqrt((Math.pow(cx - 4, 2) + Math.pow(cy- 0.2, 2) + Math.pow(cz), 3))) {
+    if (choose_mat < 0.5) {
+      // diffuse
+      const rx = rand(0, 1) * rand(0, 1);
+      const ry = rand(0, 1) * rand(0, 1);
+      const rz = rand(0, 1) * rand(0, 1);
+      addMaterials += `Material m${c} = Material(0, vec3(${rx}, ${ry}, ${rz}), 0.8);`;
+      addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), ${s}, m${c});`;
+    } else if (choose_mat < 0.9) {
+      // metal
+      const rx = rand(0.5, 1);
+      const ry = rand(0.5, 1);
+      const rz = rand(0.5, 1);
+      const fuzz = rand(0, 0.5);
+      const s1 = rand(-0.5, 0.5);
+      addMaterials += `Material m${c} = Material(1, vec3(${rx}, ${ry}, ${rz}), ${fuzz});`;
+      addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), ${s}, m${c});`;
+    } else {
+      // glass
+      addMaterials += `Material m${c} = Material(2, vec3(0.), 1.);`;
+      addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), ${s}, m${c});`;
     }
+    c++;
+    //}
   }
   //console.log(addSpheres)
   return `
@@ -388,10 +388,10 @@ function getFS() {
     }
 
     float aspectRatio = canvasDimensions.x / canvasDimensions.y;
-    float vfov = 20.;
+    float vfov = ${fov}.;
 
-    vec3 lookFrom = vec3(13, 2, 3);
-    vec3 lookAt = vec3(0, 0, 0);
+    vec3 lookFrom = vec3(${clf[0]}, ${clf[1]}, ${clf[2]});
+    vec3 lookAt = vec3(${cla[0]}, ${cla[1]}, ${cla[2]});
     vec3 vUp = vec3(0, 1, 0);
 
     // Camera
@@ -414,16 +414,16 @@ function getFS() {
       - w;
 
     Material m1 = Material(0, vec3(0.5, 0.5, 0.5), 1.);
-    Material m2 = Material(2, vec3(0.7, 0.3, 0.3), 1.);
+    /*Material m2 = Material(2, vec3(0.7, 0.3, 0.3), 1.);
     Material m3 = Material(0, vec3(0.4, 0.2, 0.1), 0.1);
-    Material m4 = Material(1, vec3(0.7, 0.6, 0.5), 0.0);
+    Material m4 = Material(1, vec3(0.7, 0.6, 0.5), 0.0);*/
     ${addMaterials}
 
     Sphere spheres[${c}];
     spheres[0] = Sphere(vec3(0, -1000, 0), 1000., m1);
-    spheres[1] = Sphere(vec3(0, 1, 0), 1., m2);
+    /*spheres[1] = Sphere(vec3(0, 1, 0), 1., m2);
     spheres[2] = Sphere(vec3(-4, 1, 0), 1., m3);
-    spheres[3] = Sphere(vec3(4, 1, 0), 1., m4);
+    spheres[3] = Sphere(vec3(4, 1, 0), 1., m4);*/
     ${addSpheres}
 
     // anti aliasing
@@ -502,14 +502,25 @@ function main() {
     return;
   }
 
-  canvas.width = parseInt(document.querySelector('.cx').value);
-  canvas.height = parseInt(document.querySelector('.cy').value);
+  canvas.width = parseInt(document.querySelector('#cw').value);
+  canvas.height = parseInt(document.querySelector('#ch').value);
+
+  const clfx = parseFloat(document.querySelector('#clfx').value);
+  const clfy = parseFloat(document.querySelector('#clfy').value);
+  const clfz = parseFloat(document.querySelector('#clfz').value);
+  const clax = parseFloat(document.querySelector('#clax').value);
+  const clay = parseFloat(document.querySelector('#clay').value);
+  const claz = parseFloat(document.querySelector('#claz').value);
+  const fov = parseInt(document.querySelector('#fov').value);
+  const nb = parseInt(document.querySelector('#nb').value);
 
   //console.log(canvas.height * canvas.width)
 
   // create GLSL shaders, upload the GLSL source, compile the shaders
   const vertexShader = createShader(gl, gl.VERTEX_SHADER, vs);
-  const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, getFS());
+  const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER,
+    getFS([clfx, clfy, clfz], [clax, clay, claz], fov, nb)
+  );
 
   const drawVertexShader = createShader(gl, gl.VERTEX_SHADER, drawVS);
   const drawFragmentShader = createShader(gl, gl.FRAGMENT_SHADER, drawFS);
