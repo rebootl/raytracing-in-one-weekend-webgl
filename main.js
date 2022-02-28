@@ -77,7 +77,7 @@ const vs = `
   }
 `;
 
-function getFS(clf, cla, fov, nb) {
+function getFS(clf, cla, fov, nb, ap, amb, bg) {
 
   let addMaterials = `
   //Material m5 = Material(1, vec3(0.8, 0.6, 0.2), 0.8);
@@ -88,39 +88,70 @@ function getFS(clf, cla, fov, nb) {
   `;
   //addSpheres += `spheres[${c}] = Sphere(vec3(1, 0, 0.5), 0.2, m2);`;
 
+  let bgstr = bg[0] === 'default' ? `` :
+    `if (s == 0) return vec3(${bg[1]}, ${bg[2]}, ${bg[3]});`;
+
   let c = 5;
-  for (let b = 0; b < nb; b++) {
-    const choose_mat = rand(0, 1);
+  // light
+  for (let a = 0; a < nb[0]; a++) {
     const cx = rand(-2, 2);
     const cy = rand(0, 2);
     const cz = rand(-2, 2);
     const s = rand(0.1, 0.5);
-
-    //if (Math.sqrt((Math.pow(cx - 4, 2) + Math.pow(cy- 0.2, 2) + Math.pow(cz), 3))) {
-    if (choose_mat < 0.5) {
-      // diffuse
-      const rx = rand(0, 1) * rand(0, 1);
-      const ry = rand(0, 1) * rand(0, 1);
-      const rz = rand(0, 1) * rand(0, 1);
-      addMaterials += `Material m${c} = Material(0, vec3(${rx}, ${ry}, ${rz}), 0.8);`;
-      addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), ${s}, m${c});`;
-    } else if (choose_mat < 0.9) {
-      // metal
-      const rx = rand(0.5, 1);
-      const ry = rand(0.5, 1);
-      const rz = rand(0.5, 1);
-      const fuzz = rand(0, 0.5);
-      const s1 = rand(-0.5, 0.5);
-      addMaterials += `Material m${c} = Material(1, vec3(${rx}, ${ry}, ${rz}), ${fuzz});`;
-      addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), ${s}, m${c});`;
-    } else {
-      // glass
-      addMaterials += `Material m${c} = Material(2, vec3(0.), 1.);`;
-      addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), ${s}, m${c});`;
-    }
+    const rx = rand(0.5, 1);
+    const ry = rand(0.5, 1);
+    const rz = rand(0.5, 1);
+    addMaterials += `Material m${c} = Material(3, vec3(${rx}, ${ry}, ${rz}), 0.8);`;
+    addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), ${s}, m${c});`;
     c++;
-    //}
   }
+  // diffuse
+  for (let a = 0; a < nb[1]; a++) {
+    const cx = rand(-2, 2);
+    const cy = rand(0, 2);
+    const cz = rand(-2, 2);
+    const s = rand(0.1, 0.5);
+    const rx = rand(0, 1) * rand(0, 1);
+    const ry = rand(0, 1) * rand(0, 1);
+    const rz = rand(0, 1) * rand(0, 1);
+    addMaterials += `Material m${c} = Material(0, vec3(${rx}, ${ry}, ${rz}), 0.8);`;
+    addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), ${s}, m${c});`;
+    c++;
+  }
+  // metal
+  for (let a = 0; a < nb[2]; a++) {
+    const cx = rand(-2, 2);
+    const cy = rand(0, 2);
+    const cz = rand(-2, 2);
+    const s = rand(0.1, 0.5);
+    const rx = rand(0.5, 1);
+    const ry = rand(0.5, 1);
+    const rz = rand(0.5, 1);
+    const fuzz = rand(0, 0.5);
+    addMaterials += `Material m${c} = Material(1, vec3(${rx}, ${ry}, ${rz}), ${fuzz});`;
+    addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), ${s}, m${c});`;
+    c++;
+  }
+  // glass
+  for (let a = 0; a < nb[3]; a++) {
+    const cx = rand(-2, 2);
+    const cy = rand(0, 2);
+    const cz = rand(-2, 2);
+    const s = rand(0.1, 0.5);
+    addMaterials += `Material m${c} = Material(2, vec3(0.), 1.);`;
+    addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), ${s}, m${c});`;
+    c++;
+  }
+  // hollow glass
+  /*for (let a = 0; a < nb[4]; a++) {
+    const cx = rand(-2, 2);
+    const cy = rand(0, 2);
+    const cz = rand(-2, 2);
+    const s = rand(-0.1, -0.5);
+    addMaterials += `Material m${c} = Material(2, vec3(0.), 1.);`;
+    addSpheres += `spheres[${c}] = Sphere(vec3(${cx}, ${cy}, ${cz}), ${s}, m${c});`;
+    c++;
+  }*/
   //console.log(addSpheres)
   return `
   // fragment shaders don't have a default precision so we need
@@ -186,6 +217,12 @@ function getFS(clf, cla, fov, nb) {
     vec3 p = vec3(sin(theta) * cos(phi), sin(theta)*sin(phi), cos(theta));
 
     return normalize(p);
+  }
+
+  vec3 random_in_unit_disk(float seed){
+    vec2 rand = random2(seed);
+    float theta = rand.x * TAU;
+    return vec3(cos(theta), sin(theta), 0)*rand.y;
   }
 
   vec3 random_unit(float seed){
@@ -259,10 +296,10 @@ function getFS(clf, cla, fov, nb) {
   }
 
   float reflectance(float cosine, float ref_idx) {
-      // Use Schlick's approximation for reflectance.
-      float r0 = (1. - ref_idx) / (1. + ref_idx);
-      r0 = r0 * r0;
-      return r0 + (1. - r0) * pow((1. - cosine), 5.);
+    // Use Schlick's approximation for reflectance.
+    float r0 = (1. - ref_idx) / (1. + ref_idx);
+    r0 = r0 * r0;
+    return r0 + (1. - r0) * pow((1. - cosine), 5.);
   }
 
   vec3 refractMat(inout Ray r, hitRecord rec, vec3 col) {
@@ -285,6 +322,13 @@ function getFS(clf, cla, fov, nb) {
     r.direction = direction;
     col = col * vec3(1., 1., 1.);
     return col;
+  }
+
+  vec3 emissiveMat(inout Ray r, hitRecord rec) {
+    /*r.origin = rec.p;
+    r.direction = vec3(0.);
+    col = rec.m.color;*/
+    return rec.m.color;
   }
 
   void setFaceNormal(const Ray r, const vec3 outwardNormal, inout hitRecord rec) {
@@ -361,6 +405,10 @@ function getFS(clf, cla, fov, nb) {
         if (rec.m.type == 2) {
           col = refractMat(r, rec, col);
         }
+        if (rec.m.type == 3) {
+          col = emissiveMat(r, rec);
+          return col;
+        }
 
         // normal
         //col = 0.5 * (rec.normal + vec3(1,1,1));
@@ -370,8 +418,9 @@ function getFS(clf, cla, fov, nb) {
         vec3 col = (1. - t) * vec3(1., 1., 1.) + t * vec3(0.5, 0.7, 1.0);
         return col;
         */
+        ${bgstr}
         float t = 0.5 * (normalize(r.direction).y + 1.0);
-        col *= mix(vec3(1.0), vec3(0.5,0.7,1.0), t);
+        col *= mix(vec3(1.0), vec3(0.5,0.7,1.0), t) * float(${amb});
         return col;
       }
     }
@@ -394,6 +443,9 @@ function getFS(clf, cla, fov, nb) {
     vec3 lookAt = vec3(${cla[0]}, ${cla[1]}, ${cla[2]});
     vec3 vUp = vec3(0, 1, 0);
 
+    float aperture = float(${ap});
+    float focusDist = length(lookFrom - lookAt);
+
     // Camera
 
     float theta = deg2rad(vfov);
@@ -408,10 +460,12 @@ function getFS(clf, cla, fov, nb) {
     vec3 v = cross(w, u);
 
     vec3 origin = lookFrom;
-    vec3 horizontal = viewportWidth * u;
-    vec3 vertical = viewportHeight * v;
+    vec3 horizontal = viewportWidth * u * focusDist;
+    vec3 vertical = viewportHeight * v * focusDist;
     vec3 lowerLeftCorner = origin - horizontal / 2. - vertical / 2.
-      - w;
+      - w * focusDist;
+
+    float lensRadius = aperture / 2.;
 
     Material m1 = Material(0, vec3(0.5, 0.5, 0.5), 1.);
     /*Material m2 = Material(2, vec3(0.7, 0.3, 0.3), 1.);
@@ -434,9 +488,13 @@ function getFS(clf, cla, fov, nb) {
       st = uv;
     }
 
+    vec3 rd = lensRadius * random_in_unit_disk(g_seed);
+    vec3 offset = vec3(uv, 0.) * rd;
+
     Ray r = Ray(
       origin,
-      normalize(lowerLeftCorner + st.x * horizontal + st.y * vertical - origin)
+      normalize(lowerLeftCorner + st.x * horizontal + st.y * vertical - origin
+        - offset)
     );
     vec3 pixelColor = rayColor(r, spheres);
 
@@ -512,14 +570,27 @@ function main() {
   const clay = parseFloat(document.querySelector('#clay').value);
   const claz = parseFloat(document.querySelector('#claz').value);
   const fov = parseInt(document.querySelector('#fov').value);
-  const nb = parseInt(document.querySelector('#nb').value);
+  const nbemi = parseInt(document.querySelector('#nbemi').value);
+  const nbdif = parseInt(document.querySelector('#nbdif').value);
+  const nbmet = parseInt(document.querySelector('#nbmet').value);
+  const nbgla = parseInt(document.querySelector('#nbgla').value);
+  //const nbhol = parseInt(document.querySelector('#nbhol').value);
+
+  const ap = parseFloat(document.querySelector('#ap').value);
+  const amb = parseFloat(document.querySelector('#amb').value);
+  const bg = document.querySelector('input[name="bg"]:checked').value;
+  const bgr = parseFloat(document.querySelector('#bgr').value);
+  const bgg = parseFloat(document.querySelector('#bgg').value);
+  const bgb = parseFloat(document.querySelector('#bgb').value);
 
   //console.log(canvas.height * canvas.width)
 
   // create GLSL shaders, upload the GLSL source, compile the shaders
   const vertexShader = createShader(gl, gl.VERTEX_SHADER, vs);
   const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER,
-    getFS([clfx, clfy, clfz], [clax, clay, claz], fov, nb)
+    getFS([clfx, clfy, clfz], [clax, clay, claz], fov,
+      [nbemi, nbdif, nbmet, nbgla], ap, amb,
+      [bg, bgr, bgg, bgb])
   );
 
   const drawVertexShader = createShader(gl, gl.VERTEX_SHADER, drawVS);
