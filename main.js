@@ -77,7 +77,7 @@ const vs = `
   }
 `;
 
-function getFS(clf, cla, fov, nb, ap, amb, bg) {
+function getFS(clf, cla, fov, nb, ap, amb, bg, fl) {
 
   let addMaterials = `
   //Material m5 = Material(1, vec3(0.8, 0.6, 0.2), 0.8);
@@ -467,7 +467,7 @@ function getFS(clf, cla, fov, nb, ap, amb, bg) {
 
     float lensRadius = aperture / 2.;
 
-    Material m1 = Material(0, vec3(0.5, 0.5, 0.5), 1.);
+    Material m1 = Material(0, vec3(${fl[0]}, ${fl[1]}, ${fl[2]}), 1.);
     /*Material m2 = Material(2, vec3(0.7, 0.3, 0.3), 1.);
     Material m3 = Material(0, vec3(0.4, 0.2, 0.1), 0.1);
     Material m4 = Material(1, vec3(0.7, 0.6, 0.5), 0.0);*/
@@ -534,10 +534,11 @@ const drawFS = `
   }
 `;
 
+const canvas = document.querySelector("#canvas");
+
 function main() {
   // Get A WebGL context
-  const canvas = document.querySelector("#canvas");
-  const gl = canvas.getContext("webgl");
+  const gl = canvas.getContext("webgl", {preserveDrawingBuffer: true});
   if (!gl) {
     return;
   }
@@ -582,6 +583,9 @@ function main() {
   const bgr = parseFloat(document.querySelector('#bgr').value);
   const bgg = parseFloat(document.querySelector('#bgg').value);
   const bgb = parseFloat(document.querySelector('#bgb').value);
+  const flr = parseFloat(document.querySelector('#flr').value);
+  const flg = parseFloat(document.querySelector('#flg').value);
+  const flb = parseFloat(document.querySelector('#flb').value);
 
   //console.log(canvas.height * canvas.width)
 
@@ -590,7 +594,7 @@ function main() {
   const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER,
     getFS([clfx, clfy, clfz], [clax, clay, claz], fov,
       [nbemi, nbdif, nbmet, nbgla], ap, amb,
-      [bg, bgr, bgg, bgb])
+      [bg, bgr, bgg, bgb], [flr, flg, flb])
   );
 
   const drawVertexShader = createShader(gl, gl.VERTEX_SHADER, drawVS);
@@ -755,4 +759,16 @@ function toggle() {
     run = true;
     requestAnimationFrame(r);
   }
+}
+
+function save() {
+  const imageData = canvas.toDataURL();
+  const tmpLink = document.createElement('a');
+  tmpLink.download = 'render.png'; // set the name of the download file
+  tmpLink.href = imageData;
+
+  // temporarily add link to body and initiate the download
+  document.body.appendChild(tmpLink);
+  tmpLink.click();
+  document.body.removeChild(tmpLink);
 }

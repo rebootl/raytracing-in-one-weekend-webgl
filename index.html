@@ -22,7 +22,8 @@
 		.controls {
 			display: flex;
 			flex-flow: column;
-			gap: 5px;
+			gap: 8px;
+			margin-bottom: 8px;
 		}
 		input {
 			width: 50px;
@@ -48,7 +49,7 @@
 	<div class="controls">
 		<button onclick="reset();">Start / Reset</button>
 		<button onclick="toggle();">Pause / Continue</button>
-		<pre>Frames (Antialiasing): <span class="niter">0</span></pre>
+		<div>Frames (Antialiasing): <span class="niter">0</span></div>
 		<div>
 			Canvas size:
 			<input id="cw" placeholder="width" value="600"></input>
@@ -69,6 +70,9 @@
 		<div>
 			Aperture:
 			<input id="ap" placeholder="0. - n" value="0."></input>
+			Ambient light:
+			<input id="amb" placeholder="0. - 1." value="1."></input>
+		</div>
 		<div>
 			Number of balls | Emitting:
 			<input id="nbemi" placeholder="n" value="5"></input>
@@ -85,15 +89,17 @@
   		<label for="bgd">Default</label>
 			<input type="radio" id="bgc" name="bg" value="color">
 			<label for="bgc">Color</label>
-			<input id="bgr" placeholder="r" value="0"></input>
-			<input id="bgg" placeholder="g" value="0"></input>
-			<input id="bgb" placeholder="b" value="0"></input>
+			<input id="bgr" placeholder="0-1" value="0"></input>
+			<input id="bgg" placeholder="0-1" value="0"></input>
+			<input id="bgb" placeholder="0-1" value="0"></input>
 		</div>
 		<div>
-			Ambient light:
-			<input id="amb" placeholder="0. - 1." value="1."></input>
+			Floor color:
+			<input id="flr" placeholder="0-1" value="0.5"></input>
+			<input id="flg" placeholder="0-1" value="0.5"></input>
+			<input id="flb" placeholder="0-1" value="0.5"></input>
 		</div>
-
+		<button onclick="save();">Save image!</button>
 	</div>
 
 	<div class="footer">
