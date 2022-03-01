@@ -28,9 +28,13 @@
 		input {
 			width: 50px;
 		}
+		input[type=range] {
+			width: 120px;
+		}
 		.footer, .header {
 			display: flex;
 			justify-content: center;
+		  text-align: center;
 		}
 		.header {
 			text-decoration: underline;
@@ -69,9 +73,9 @@
 		</div>
 		<div>
 			Aperture:
-			<input id="ap" placeholder="0. - n" value="0."></input>
+			<input id="ap" type="range" min="0." max="10." step="0.05" value="0."></input>
 			Ambient light:
-			<input id="amb" placeholder="0. - 1." value="1."></input>
+			<input id="amb" type="range" min="0." max="3." step="0.1" value="1."></input>
 		</div>
 		<div>
 			Number of balls | Emitting:
@@ -89,21 +93,24 @@
   		<label for="bgd">Default</label>
 			<input type="radio" id="bgc" name="bg" value="color">
 			<label for="bgc">Color</label>
-			<input id="bgr" placeholder="0-1" value="0"></input>
-			<input id="bgg" placeholder="0-1" value="0"></input>
-			<input id="bgb" placeholder="0-1" value="0"></input>
+			R <input id="bgr" type="range" min="0." max="1." step="0.02" value="0"></input>
+			G <input id="bgg" type="range" min="0." max="1." step="0.02" value="0"></input>
+			B <input id="bgb" type="range" min="0." max="1." step="0.02" value="0"></input>
 		</div>
 		<div>
 			Floor color:
-			<input id="flr" placeholder="0-1" value="0.5"></input>
-			<input id="flg" placeholder="0-1" value="0.5"></input>
-			<input id="flb" placeholder="0-1" value="0.5"></input>
+			R <input id="flr" type="range" min="0." max="1." step="0.02" value="0.5"></input>
+			G <input id="flg" type="range" min="0." max="1." step="0.02" value="0.5"></input>
+			B <input id="flb" type="range" min="0." max="1." step="0.02" value="0.5"></input>
 		</div>
 		<button onclick="save();">Save image!</button>
 	</div>
 
 	<div class="footer">
-		<small><a href="https://github.com/rebootl/raytracing-in-one-weekend-webgl/">Code <3</a></small>
+		<small>
+			Works best on Firefox. Chromium shows blue dots, not clear why. Also works on ipad. Totally broken on Android... :)<br>
+			<a href="https://github.com/rebootl/raytracing-in-one-weekend-webgl/">Code <3</a>
+		</small>
 	</div>
 
   </body>
