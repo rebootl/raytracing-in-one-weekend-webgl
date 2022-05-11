@@ -73,9 +73,9 @@
 		</div>
 		<div>
 			Aperture:
-			<input id="ap" type="range" min="0." max="10." step="0.05" value="0."></input>
+			<input id="ap" type="range" min="0.0" max="1.0" step="0.01" value="0.0">
 			Ambient light:
-			<input id="amb" type="range" min="0." max="3." step="0.1" value="1."></input>
+			<input id="amb" type="range" min="0.0" max="1.0" step="0.01" value="0.5">
 		</div>
 		<div>
 			Number of balls | Emitting:
@@ -93,15 +93,15 @@
   		<label for="bgd">Default</label>
 			<input type="radio" id="bgc" name="bg" value="color">
 			<label for="bgc">Color</label>
-			R <input id="bgr" type="range" min="0." max="1." step="0.02" value="0"></input>
-			G <input id="bgg" type="range" min="0." max="1." step="0.02" value="0"></input>
-			B <input id="bgb" type="range" min="0." max="1." step="0.02" value="0"></input>
+			R <input id="bgr" type="range" min="0.0" max="1.0" step="0.02" value="0"></input>
+			G <input id="bgg" type="range" min="0.0" max="1.0" step="0.02" value="0"></input>
+			B <input id="bgb" type="range" min="0.0" max="1.0" step="0.02" value="0"></input>
 		</div>
 		<div>
 			Floor color:
-			R <input id="flr" type="range" min="0." max="1." step="0.02" value="0.5"></input>
-			G <input id="flg" type="range" min="0." max="1." step="0.02" value="0.5"></input>
-			B <input id="flb" type="range" min="0." max="1." step="0.02" value="0.5"></input>
+			R <input id="flr" type="range" min="0.0" max="1.0" step="0.02" value="0.5"></input>
+			G <input id="flg" type="range" min="0.0" max="1.0" step="0.02" value="0.5"></input>
+			B <input id="flb" type="range" min="0.0" max="1.0" step="0.02" value="0.5"></input>
 		</div>
 		<button onclick="save();">Save image!</button>
 	</div>
